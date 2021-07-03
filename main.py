@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
@@ -10,8 +11,12 @@ from selenium.webdriver.common.by import By
 from fateadm_api import *
 from info import *
 from email.mime.text import MIMEText
+import pandas as pd
+import csv
+import urllib
 import schedule
 import smtplib
+import pyperclip
 import pyautogui
 import time
 import logging
@@ -25,60 +30,140 @@ pyautogui.FAILSAFE = False
 
 def sign_in(user):
     msg=1
-    browser = webdriver.Chrome()
+    api = FateadmApi(app_id, app_key, pd_id, pd_key)
+    options = webdriver.ChromeOptions()
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
+    browser = webdriver.Chrome(options=options)
+    with open("./stealth.min.js/stealth.min.js") as f:
+        js = f.read()
+    browser.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+        "source": js
+        })
+
     browser.get('https://gre.neea.cn/')
-    time.sleep(3)
+    time.sleep(10)
     logging.info("Successfully get chrome driver.")
-    neeaId=browser.find_element_by_id('neeaId')
-    print("Found <%s> element with that number!" % (neeaId.tag_name))
-    password=browser.find_element_by_id('password')
-    print("Found <%s> element with that card!" % (password.tag_name))
-    code=browser.find_element_by_id('checkImageCode')
-    print("Found <%s> element with that verify!" % (code.tag_name))
-    #sign_bt=browser.find_element(By.XPATH,'//button[text()="Some Text"]')
-    #print("Found <%s> element with that sub_btn!" % (sign_bt.tag_name))
-    action = ActionChains(browser)
-    action.context_click(code).perform()
-    chkImg=browser.find_element_by_id('chkImg')
-    print("Found <%s> element with that auth_code_img!" % (chkImg.tag_name))
+    flag=1
+    
+    while(flag):
+        rsp = signproc(api)
+        flag = checklogin()
+        if flag and (rsp.ret_code == 0):
+            pyautogui.moveTo(270, 450)
+            pyautogui.click()
+            api.Justice(rsp.request_id)
 
-    number.send_keys(user.uid)
-    password.send_keys(user.pwd)
-    rsp=captcha_pred(chkImg.src)
-    code.send_keys(rsp.pred_rsp.value)
-    #press enter
-    send_keys(Keys.ENTER)
+    time.sleep(5)
+    if flag==0:
+        print("lets find seats")
+        pyautogui.click()
+        pyautogui.moveTo(790,420)
+        pyautogui.click()
+        time.sleep(3)
+        pyautogui.moveTo(194,672)
+        pyautogui.click()
+        time.sleep(1)
+        pyautogui.moveTo(775,676)
+        pyautogui.click()
+        time.sleep(3)
+    selectcity()
+    saveweb()
+    checkseats()
 
-    try:
-        wait = WebDriverWait(browser, 10)
-        wait.until(EC.alert_is_present())
-        alert = browser.switch_to.alert
-        if alert.text == "请输入有效验证码":
-            logging.info("Captcha for user <{0}> is wrong, now try again.".format(user.uid))
-            alert.accept()
-            browser.quit()
-            if rsp.ret_code == 0:
-                api = FateadmApi(app_id, app_key, pd_id, pd_key)
-                api.Justice(rsp.request_id)
-        elif alert.text == "工号或密码错误，请重新输入！":
-            logging.DEBUG("Password for user <{0}> is wrong, now try again.".format(user.uid))
-        return 0;
-    except TimeoutException:
-        success_sub=0
-        while success_sub==0:
-            success_sub = sub_info(browser, user)
-
-    browser.quit()
+    time.sleep(1000)
+    #browser.quit()
     return 1;
 
-def captcha_pred(url):
+def checksetas():
+    tb = pd.read_html('../Downloads/教育部考试中心GRE考试报名网.html')
+    t1 = tb[1]
+    print(t1)
+    
+def saveweb():
+    clc(370,158)
+    pyautogui.rightClick()
+    pyautogui.press('down')
+    pyautogui.press('down')
+    pyautogui.press('down')
+    pyautogui.press('enter')
+    time.sleep(2)
+    pyautogui.typewrite('data')
+    pyautogui.press('enter')
+    clc(700,474)
+    
+def signproc(api):
+    pyautogui.typewrite(user.uid, interval=0.25)
+    pyautogui.press('enter')
+    pyautogui.typewrite(user.pwd, interval=0.25)
+    pyautogui.press('enter')
+    time.sleep(3)
+    #action = ActionChains(browser)
+    pyautogui.moveTo(300, 550)
+    pyautogui.rightClick()
+    pyautogui.press('down')
+    pyautogui.press('down')
+    pyautogui.press('down')
+    pyautogui.press('down')
+    pyautogui.press('enter')
+
+    src = pyperclip.paste()
+    rsp = captcha_pred(src,api)
+    pyautogui.moveTo(300, 580)
+    pyautogui.click()
+    pyautogui.typewrite(rsp.pred_rsp.value, interval=0.25)
+    #pyautogui.typewrite("cnmb", interval=0.25)
+    pyautogui.press('enter')
+    time.sleep(5)
+    return rsp
+    
+def checklogin():
+    pyautogui.moveTo(250, 420)
+    pyautogui.dragRel(80,0, duration=0.5)
+    pyautogui.hotkey('ctrl', 'c')
+    pyautogui.click()
+    string = pyperclip.paste()
+    print(string)
+    if string == "验证码不正确":
+        return 1
+    else:
+        return 0
+    return 0
+
+def selectcity():
+    clc(299,499)
+    clc(325,530)
+    clc(299,569)
+    clc(319,536)
+    clc(322,559)
+    clc(301,595)
+    clc(316,561)
+    clc(330,583)
+    clc(301,624)
+    clc(316,505)
+    clc(294,532)
+    clc(311,645)
+    clc(297,682)
+    clc(364,684)
+    clc(432,684)
+    clc(498,686)
+    clc(331,592)
+    clc(563,626)
+    clc(674,449)
+    clc(692,533)
+
+def clc(x,y):
+    pyautogui.moveTo(x,y)
+    pyautogui.click()
+    time.sleep(1)
+    
+def captcha_pred(url, api):
     #识别类型， 具体类型可以查看官方网站的价格页选择具体的类型
     pred_type = "20400"
-    api = FateadmApi(app_id, app_key, pd_id, pd_key)
     # 查询余额
     balance = api.QueryBalcExtend()   # 直接返余额
     # 如果不是通过文件识别，则调用Predict接口：
-    # result             = api.PredictExtend(pred_type,data)       # 直接返回识别结果
+    # result = api.PredictExtend(pred_type,data)       # 直接返回识别结果
     img = urllib.request.urlopen(url)
     data = img.read()
     rsp = api.Predict(pred_type,data)  # 返回详细的识别结果
@@ -146,9 +231,9 @@ def mail(mail_text, mail_to):
 def daily():
     for user in users:
         logging.info("Get user <{0}> form user list.".format(user.uid))
-        flag=0
-        while(flag==0):
-            flag = sign_in(user)
+        mark=0
+        while(mark==0):
+            mark = sign_in(user)
         msg = user.uid + ": 打卡成功"
         mail(msg, user.email)
         logging.info("Emailing to User {0} for notification".format(user.uid))

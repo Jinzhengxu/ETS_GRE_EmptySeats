@@ -13,10 +13,10 @@ class User:
 
 daka_time="08:25"
 
-pd_id = "1256123"     #用户中心页可以查询到pd信息
-pd_key = "13123"
-app_id = "321236"     #开发者分成用的账号，在开发者中心可以查询到
-app_key = "12312"
+pd_id = "125686"     #用户中心页可以查询到pd信息
+pd_key = "jxq9WUgEtEPaBrz2ZQkbhatlZyO2jHvO"
+app_id = "325686"     #开发者分成用的账号，在开发者中心可以查询到
+app_key = "DdHdBvwwApGWDThLGNJzdhZr2gJPL31J"
 
 MAIL_USER = "18766180878@163.com"        # 用于发送通知的邮箱
 MAIL_PWD = ""    # 该邮箱的授权码
